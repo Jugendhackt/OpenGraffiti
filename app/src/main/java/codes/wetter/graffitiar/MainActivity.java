@@ -1,5 +1,6 @@
 package codes.wetter.graffitiar;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -7,33 +8,118 @@ import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.widget.Toast;
 
+import com.google.ar.core.Frame;
+import com.google.ar.core.HitResult;
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
 
 public class MainActivity extends AppCompatActivity {
 
-  public static final String TAG = "GRAFFITIAR";
-  private static final double MIN_OPENGL_VERSION = 3.0;
+  public static final String TAG = "GRAFFITIAR-LOG";
+
+  private final int MIN_ANDROID_VERSION = Build.VERSION_CODES.N;
+  private final double MIN_OPENGL_VERSION = 3.0;
 
   private ArFragment arFragment;
 
+  private CompletableFuture<ViewRenderable> image;
+
+  private final int QUEUE_CAPACITY = 16;
+  private ArrayBlockingQueue<MotionEvent> queuedScrollPresses = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+
+  @SuppressLint("ClickableViewAccessibility")
   @Override
-  @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"})
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    if (!checkIsSupportedDeviceOrFinish(this)) {
+    if (!isSupportedDevice(this)) {
       return;
     }
     setContentView(R.layout.activity_main);
 
     arFragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
-    // TODO..
+    if (arFragment == null) {
+      return;
+    }
+
+    image = ViewRenderable.builder().setView(this, R.layout.spray_image).build();
+
+    GestureDetector.OnGestureListener gestureListener = new GestureDetector.OnGestureListener() {
+      @Override
+      public boolean onDown(MotionEvent motionEvent) {
+        return false;
+      }
+
+      @Override
+      public void onShowPress(MotionEvent motionEvent) {
+      }
+
+      @Override
+      public boolean onSingleTapUp(MotionEvent motionEvent) {
+        return false;
+      }
+
+      @Override
+      public boolean onScroll(MotionEvent startMotionEvent, MotionEvent motionEvent, float v, float v1) {
+        queuedScrollPresses.offer(motionEvent);
+        return false;
+      }
+
+      @Override
+      public void onLongPress(MotionEvent motionEvent) {
+      }
+
+      @Override
+      public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
+        return false;
+      }
+    };
+    arFragment.getArSceneView().setOnTouchListener((view, motionEvent) -> new GestureDetector(getBaseContext(), gestureListener).onTouchEvent(motionEvent));
+
+    arFragment.getArSceneView().getScene().addOnUpdateListener(frameTime -> {
+      MotionEvent motionEvent = queuedScrollPresses.poll();
+      if (motionEvent == null) {
+        return;
+      }
+
+      Frame frame = arFragment.getArSceneView().getArFrame();
+      if (frame == null) {
+        return;
+      }
+
+      for (HitResult hitResult : frame.hitTest(motionEvent)) {
+        AnchorNode anchorNode = new AnchorNode(hitResult.createAnchor());
+        anchorNode.setParent(arFragment.getArSceneView().getScene());
+
+        Node node = new Node();
+        node.setParent(anchorNode);
+        node.setWorldPosition(anchorNode.getWorldPosition());
+        //node.setWorldRotation(lalala); // TODO: set rotation correctly (on plane)
+
+        image
+                .thenAccept(
+                        (renderable) -> node.setRenderable(renderable))
+                .exceptionally(
+                        throwable -> {
+                          Toast.makeText(this, "Unable to load the renderable", Toast.LENGTH_LONG).show();
+                          return null;
+                        });
+      }
+    });
   }
 
-  public static boolean checkIsSupportedDeviceOrFinish(final Activity activity) {
+  @SuppressLint("ObsoleteSdkInt")
+  private boolean isSupportedDevice(final Activity activity) {
     // Android version
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+    if (Build.VERSION.SDK_INT < MIN_ANDROID_VERSION) {
       String error = "Sceneform SDK requires Android N or later";
       Log.e(TAG, error);
       Toast.makeText(activity, error, Toast.LENGTH_LONG).show();
