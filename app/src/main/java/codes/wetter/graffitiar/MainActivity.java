@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     if (arFragment == null) {
       return;
     }
+    arFragment.getArSceneView().getPlaneRenderer().setShadowReceiver(false);
 
     int defaultColor = R.color.black;
     colorPicker = new ColorPicker(this, Color.red(defaultColor), Color.green(defaultColor), Color.blue(defaultColor));
