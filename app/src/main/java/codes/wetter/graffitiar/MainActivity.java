@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     if (arFragment == null) {
       return;
     }
+    arFragment.getArSceneView().getPlaneRenderer().setShadowReceiver(false);
 
     image = ViewRenderable.builder().setView(this, R.layout.spray_image).build();
 
