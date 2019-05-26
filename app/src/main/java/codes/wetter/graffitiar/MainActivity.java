@@ -12,10 +12,15 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
+import com.google.ar.core.Anchor;
 import com.google.ar.core.Frame;
 import com.google.ar.core.HitResult;
+import com.google.ar.core.Plane;
+import com.google.ar.core.Trackable;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.math.Quaternion;
+import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 
@@ -96,24 +101,55 @@ public class MainActivity extends AppCompatActivity {
       }
 
       for (HitResult hitResult : frame.hitTest(motionEvent)) {
-        AnchorNode anchorNode = new AnchorNode(hitResult.createAnchor());
-        anchorNode.setParent(arFragment.getArSceneView().getScene());
+        Trackable trackable = hitResult.getTrackable();
+        if (trackable instanceof Plane) {
+          Plane plane = (Plane) trackable;
+          if (plane.isPoseInPolygon(hitResult.getHitPose())) {
+            Anchor anchor = hitResult.createAnchor();
+            AnchorNode anchorNode = new AnchorNode(anchor);
+            anchorNode.setParent(arFragment.getArSceneView().getScene());
 
-        Node node = new Node();
-        node.setParent(anchorNode);
-        node.setWorldPosition(anchorNode.getWorldPosition());
-        //node.setWorldRotation(lalala); // TODO: set rotation correctly (on plane)
+            Node node = new Node();
+            node.setParent(anchorNode);
 
-        image
-                .thenAccept(
-                        (renderable) -> node.setRenderable(renderable))
-                .exceptionally(
-                        throwable -> {
-                          Toast.makeText(this, "Unable to load the renderable", Toast.LENGTH_LONG).show();
-                          return null;
-                        });
+            float[] planeRotation = plane.getCenterPose().getRotationQuaternion();
+            Vector3 rotationVector = qToVector3(new Quaternion(-planeRotation[0], planeRotation[1], planeRotation[2], planeRotation[3]));
+            node.setLookDirection(rotationVector);
+
+            image
+                    .thenAccept(
+                            (renderable) -> node.setRenderable(renderable))
+                    .exceptionally(
+                            throwable -> {
+                              Toast.makeText(this, "Unable to load the renderable", Toast.LENGTH_LONG).show();
+                              return null;
+                            });
+          }
+        }
       }
     });
+  }
+
+  private Vector3 qToVector3(Quaternion q) {
+    // roll (x-axis rotation)
+    double sinr_cosp = +2.0 * (q.w * q.x + q.y * q.z);
+    double cosr_cosp = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+    double roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = +2.0 * (q.w * q.y - q.z * q.x);
+    double pitch;
+    if (Math.abs(sinp) >= 1) {
+      pitch = Math.copySign(Math.PI / 2, sinp); // use 90 degrees if out of range
+    } else {
+      pitch = Math.asin(sinp);
+    }
+
+    // yaw (z-axis rotation)
+    double siny_cosp = +2.0 * (q.w * q.z + q.x * q.y);
+    double cosy_cosp = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+    double yaw = Math.atan2(siny_cosp, cosy_cosp);
+    return new Vector3((float) roll, (float) pitch, (float) yaw);
   }
 
   @SuppressLint("ObsoleteSdkInt")
