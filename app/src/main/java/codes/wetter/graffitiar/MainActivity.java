@@ -4,12 +4,19 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Build;
+import android.support.constraint.ConstraintLayout;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
@@ -23,6 +30,7 @@ import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
+import com.pes.androidmaterialcolorpickerdialog.ColorPicker;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
 
   private ArFragment arFragment;
 
+  private FloatingActionButton colorFab;
+  private ColorPicker colorPicker;
   private CompletableFuture<ViewRenderable> image;
 
   private final int QUEUE_CAPACITY = 16;
@@ -55,7 +65,15 @@ public class MainActivity extends AppCompatActivity {
       return;
     }
 
-    image = ViewRenderable.builder().setView(this, R.layout.spray_image).build();
+    int defaultColor = R.color.black;
+    colorPicker = new ColorPicker(this, Color.red(defaultColor), Color.green(defaultColor), Color.blue(defaultColor));
+    colorPicker.enableAutoClose();
+    colorPicker.setCallback(this::updateSprayColor);
+
+    colorFab = findViewById(R.id.colorFab);
+    colorFab.setOnClickListener(view -> colorPicker.show());
+
+    updateSprayColor(defaultColor);
 
     GestureDetector.OnGestureListener gestureListener = new GestureDetector.OnGestureListener() {
       @Override
@@ -128,6 +146,17 @@ public class MainActivity extends AppCompatActivity {
         }
       }
     });
+  }
+
+  @SuppressLint("InflateParams")
+  private void updateSprayColor(int color) {
+    LayoutInflater layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    ConstraintLayout sprayLayout = (ConstraintLayout) layoutInflater.inflate(R.layout.spray_image, null);
+    ImageView sprayView = sprayLayout.findViewById(R.id.sprayView);
+    sprayView.getDrawable().mutate().setColorFilter(color, PorterDuff.Mode.SRC_IN);
+    image = ViewRenderable.builder().setView(this, sprayLayout).build();
+
+    colorFab.setBackgroundTintList(ColorStateList.valueOf(color));
   }
 
   private Vector3 qToVector3(Quaternion q) {
