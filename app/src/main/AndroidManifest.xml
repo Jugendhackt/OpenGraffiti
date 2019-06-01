@@ -6,6 +6,10 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="true" />
+
     <dist:module dist:instant="true" />
 
     <application
