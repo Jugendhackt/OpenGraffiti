@@ -8,6 +8,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Build;
+import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -59,6 +60,9 @@ public class MainActivity extends AppCompatActivity {
       return;
     }
     setContentView(R.layout.activity_main);
+
+    Toast.makeText(this, getResources().getString(R.string.warning_1), Toast.LENGTH_LONG).show();
+    new Handler().postDelayed(() -> Toast.makeText(MainActivity.this, getResources().getString(R.string.warning_2), Toast.LENGTH_LONG).show(), 4000);
 
     arFragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
     if (arFragment == null) {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="warning_1">Diese App sollte nur unter elterlicher Aufsicht verwendet werden.</string>
+    <string name="warning_2">Achte bei der Nutzung dieser App auf deine Umgebung.</string>
+</resources>
