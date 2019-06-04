@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Graffiti AR</string>
+    <string name="warning">Attention</string>
     <string name="warning_1">This app should only be used under parental supervision.</string>
     <string name="warning_2">Be aware of your surroundings when using this app.</string>
+    <string name="warning_accept" translatable="false">OK</string>
+    <string name="warning_deny">Cancel</string>
 </resources>

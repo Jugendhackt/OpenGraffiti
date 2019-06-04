@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -11,6 +12,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -59,10 +61,24 @@ public class MainActivity extends AppCompatActivity {
     if (!isSupportedDevice(this)) {
       return;
     }
-    setContentView(R.layout.activity_main);
 
-    Toast.makeText(this, getResources().getString(R.string.warning_1), Toast.LENGTH_LONG).show();
-    new Handler().postDelayed(() -> Toast.makeText(MainActivity.this, getResources().getString(R.string.warning_2), Toast.LENGTH_LONG).show(), 4000);
+    String warning1 = getResources().getString(R.string.warning_1);
+    showWarningDialog(warning1,
+            (dialogInterface, i) -> {
+              String warning2 = getResources().getString(R.string.warning_2);
+              showWarningDialog(warning2, (dialogInterface2, i2) -> {
+                init();
+              }, (dialogInterface2, i2) -> {
+                finish();
+              });
+            }, (dialogInterface, i) -> {
+              finish();
+            }
+    );
+  }
+
+  private void init() {
+    setContentView(R.layout.activity_main);
 
     arFragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.ux_fragment);
     if (arFragment == null) {
@@ -151,6 +167,15 @@ public class MainActivity extends AppCompatActivity {
         }
       }
     });
+  }
+
+  private void showWarningDialog(String message, DialogInterface.OnClickListener onAccept, DialogInterface.OnClickListener onDeny) {
+    AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_AppCompat_Light_Dialog_Alert);
+    builder.setTitle(getResources().getString(R.string.warning));
+    builder.setMessage(message);
+    builder.setPositiveButton(getResources().getString(R.string.warning_accept), onAccept);
+    builder.setNegativeButton(getResources().getString(R.string.warning_deny), onDeny);
+    builder.show();
   }
 
   @SuppressLint("InflateParams")
